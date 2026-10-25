@@ -1,0 +1,42 @@
+ANS VirtualBIOS - boot logo (AMI style, text-mode safe)
+========================================================
+
+FINAL (integrated into ans_bios.asm as `logo` + `version`):
+
+  - AMI look: a centered wordmark framed by DOUBLE horizontal rules.
+  - On the VGA text screen the rule char is CP437 0xCD -> true double line.
+  - On the serial console (-serial stdio, headless) emit_char translates
+    0xCD into the UTF-8 sequence for U+2550 (E2 95 90) so a UTF-8 terminal
+    also shows a clean double line instead of mojibake.
+
+Rendered result (what you see):
+  (top margin)
+  ════════════════════════════════════════════════════
+                 A N S   V I R T U A L   B I O S
+  ════════════════════════════════════════════════════
+  ANS VirtualBIOS v0.1  (C) 2026 ANS
+
+How it is encoded in the asm (serial-safe, no mojibake):
+  logo:
+      db 0x0D, 0x0A            ; top margin
+      times 12 db ' '          ; indent to center the 56-wide rule band
+      times 56 db 0xCD        ; double rule (═)
+      db 0x0D, 0x0A
+      times 25 db ' '          ; indent to center the 29-wide wordmark
+      db "A N S   V I R T U A L   B I O S"
+      db 0x0D, 0x0A
+      times 12 db ' '
+      times 56 db 0xCD
+      db 0x0D, 0x0A, 0
+
+  version  db "ANS VirtualBIOS v0.1  (C) 2026 ANS", 0x0D, 0x0A, 0
+
+Notes:
+  - 56-wide rule band, 12-col indent -> spans cols 12..67.
+  - 29-wide wordmark, 25-col indent -> centered within the band (cols 25..54).
+  - Block-letter version (█-painted A/N/S) was rejected: the █ (0xDB) glyph
+    is mojibake on a UTF-8 serial console, and the user verifies via headless
+    serial. The plain spaced wordmark is clean on both VGA and serial.
+  - If you ONLY ever boot the QEMU GUI (VGA) and want the true CP437 double
+    line there too, the current code already does that; the 0xCD is kept for
+    VGA, only the serial stream is UTF-8-translated.
